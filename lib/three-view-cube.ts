@@ -11,14 +11,14 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { MapControls } from "three/examples/jsm/controls/MapControls";
 import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer";
-import { createCube } from "./utils";
+import { createCube, Side } from "./utils";
 import "./three-view-cube.css";
 
 export interface ThreeViewCubeEventMap {
   viewChange: { direction: Vector3; rotation: Euler };
 }
 
-export function easeOutCubic(t: number) {
+function easeOutCubic(t: number) {
   const t1 = t - 1;
   return t1 * t1 * t1 + 1;
 }
@@ -43,6 +43,12 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
   private _quaternion1: Quaternion | null = null;
   private _quaternionLerp: Quaternion = new Quaternion();
   private _progress = 0;
+  private _side0: Side | null = null;
+  private _side: Side | null = null;
+
+  public get plane() {
+    return this._side ? this._side.PLANE : null;
+  }
 
   public get resolution(): Vector2 {
     return this._resolution;
@@ -69,6 +75,7 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
   constructor(cameraControls: OrbitControls | MapControls) {
     super();
     this.updateCamera = this.updateCamera.bind(this);
+    this.toSide = this.toSide.bind(this);
 
     this._scene = new Scene();
 
@@ -88,12 +95,7 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
 
     this.resolution = new Vector2(96, 96);
 
-    const sideObjects = createCube(32, (side) => {
-      this._quaternion0 = new Quaternion().copy(this._camera.quaternion);
-      this._quaternion1 = new Quaternion().copy(side.DIRECTION);
-      this._progress = 0;
-      this._cameraControls.enabled = false;
-    });
+    const sideObjects = createCube(32, this.toSide);
     this._scene.add(...sideObjects);
 
     this._cubeContainer.classList.add("cube-container");
@@ -101,6 +103,14 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     this._renderer.domElement.classList.add("cube-renderer");
 
     this.render();
+  }
+
+  public toSide(side: Side) {
+    this._quaternion0 = new Quaternion().copy(this._camera.quaternion);
+    this._quaternion1 = new Quaternion().copy(side.DIRECTION);
+    this._progress = 0;
+    this._cameraControls.enabled = false;
+    this._side0 = side;
   }
 
   public updateCamera() {
@@ -115,6 +125,13 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     this._camera.position.copy(this.direction0);
     this._camera.quaternion.copy(this._cameraControls.object.quaternion);
 
+    if (
+      !this._quaternion0 &&
+      this._side &&
+      this._camera.quaternion.angleTo(this._side.DIRECTION) > 0.1
+    ) {
+      this._side = null;
+    }
     this.render();
   }
 
@@ -151,6 +168,7 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
       this.render();
 
       if (this._progress === 1) {
+        this._side = this._side0;
         this._cameraControls.enabled = true;
         this._quaternion0 = null;
         this._quaternion1 = null;
