@@ -1,4 +1,4 @@
-import {Euler, Quaternion, Vector3} from "three";
+import { Quaternion, Vector3 } from "three";
 import { CSS3DObject } from "three/examples/jsm/renderers/CSS3DRenderer";
 
 export enum PLANE {
@@ -56,10 +56,12 @@ export const rotateDirection = [
 export const getSide = (quaternion: Quaternion) => {
   const v = new Vector3(0, 1, 0).applyQuaternion(quaternion);
 
-  const sideKey = Object.keys(SIDES).find((key) => {
-    const vSide = new Vector3().copy(SIDES[key].POSITION).multiplyScalar(-1);
-    return v.distanceTo(vSide) < 0.1;
-  });
+  const sideKey = (Object.keys(SIDES) as Array<keyof typeof SIDES>).find(
+    (key) => {
+      const vSide = new Vector3().copy(SIDES[key].POSITION).multiplyScalar(-1);
+      return v.distanceTo(vSide) < 0.1;
+    },
+  );
 
   return sideKey ? SIDES[sideKey] : null;
 };
