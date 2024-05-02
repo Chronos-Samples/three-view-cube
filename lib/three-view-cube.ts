@@ -11,7 +11,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { MapControls } from "three/examples/jsm/controls/MapControls";
 import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer";
-import { createCube, Side } from "./utils";
+import { createCube, getSide, rotateDirection, Side } from "./utils";
 import "./three-view-cube.css";
 
 export interface ThreeViewCubeEventMap {
@@ -43,8 +43,14 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
   private _quaternion1: Quaternion | null = null;
   private _quaternionLerp: Quaternion = new Quaternion();
   private _progress = 0;
-  private _side0: Side | null = null;
   private _side: Side | null = null;
+  private _sideButtonContainer: HTMLDivElement;
+
+  private _isAnimating: boolean = false;
+
+  public get isAnimating() {
+    return this._isAnimating;
+  }
 
   public get plane() {
     return this._side ? this._side.PLANE : null;
@@ -102,6 +108,26 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     this._cubeContainer.append(this._renderer.domElement);
     this._renderer.domElement.classList.add("cube-renderer");
 
+    const sideButtonContainer = document.createElement("div");
+    sideButtonContainer.className = "side-button-container";
+    this._cubeContainer.append(sideButtonContainer);
+    this._sideButtonContainer = sideButtonContainer;
+
+    for (let i = 0; i < 4; i++) {
+      const sideButton = document.createElement("button");
+      sideButton.className = "cube-side-button";
+      sideButton.addEventListener("click", () => {
+        if (this._isAnimating) return;
+
+        this._quaternion0 = new Quaternion().copy(this._camera.quaternion);
+        this._quaternion1 = new Quaternion()
+          .copy(this._camera.quaternion)
+          .multiply(rotateDirection[i]);
+        this._progress = 0;
+        this._isAnimating = true;
+      });
+      sideButtonContainer.append(sideButton);
+    }
     this.render();
   }
 
@@ -109,8 +135,7 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     this._quaternion0 = new Quaternion().copy(this._camera.quaternion);
     this._quaternion1 = new Quaternion().copy(side.DIRECTION);
     this._progress = 0;
-    this._cameraControls.enabled = false;
-    this._side0 = side;
+    this._isAnimating = true;
   }
 
   public updateCamera() {
@@ -125,17 +150,16 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     this._camera.position.copy(this.direction0);
     this._camera.quaternion.copy(this._cameraControls.object.quaternion);
 
-    if (
-      !this._quaternion0 &&
-      this._side &&
-      this._camera.quaternion.angleTo(this._side.DIRECTION) > 0.1
-    ) {
+    if (!this._isAnimating && !getSide(this._camera.quaternion)) {
       this._side = null;
     }
     this.render();
   }
 
   public update(delta: number) {
+    this._sideButtonContainer.style.opacity = this._side ? "1" : "0";
+    this._sideButtonContainer.style.pointerEvents = this._side ? "all" : "none";
+
     if (this._quaternion0 && this._quaternion1) {
       this._progress = Math.min(
         this._progress + delta / this._animationDuration,
@@ -168,8 +192,8 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
       this.render();
 
       if (this._progress === 1) {
-        this._side = this._side0;
-        this._cameraControls.enabled = true;
+        this._side = getSide(this._quaternion1);
+        this._isAnimating = false;
         this._quaternion0 = null;
         this._quaternion1 = null;
       }

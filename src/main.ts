@@ -83,7 +83,7 @@ let time = 0;
 
 const loop = (elapsed: number) => {
   renderer.render(scene, camera);
-  if (controls.enabled) {
+  if (!controlsCube.isAnimating) {
     controls.update();
   }
   const delta = elapsed - time;
