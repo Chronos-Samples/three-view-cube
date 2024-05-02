@@ -116,7 +116,7 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     for (let i = 0; i < 4; i++) {
       const sideButton = document.createElement("button");
       sideButton.className = "cube-side-button";
-      sideButton.addEventListener("click", () => {
+      sideButton.addEventListener("pointerdown", () => {
         if (this._isAnimating) return;
 
         this._quaternion0 = new Quaternion().copy(this._camera.quaternion);
