@@ -54,15 +54,13 @@ export const rotateDirection = [
 ];
 
 export const getSide = (quaternion: Quaternion) => {
-  const v = new Vector3(0, 1, 0).applyQuaternion(quaternion);
-
+  const v = new Vector3(0, 0, 1).applyQuaternion(quaternion);
   const sideKey = (Object.keys(SIDES) as Array<keyof typeof SIDES>).find(
     (key) => {
-      const vSide = new Vector3().copy(SIDES[key].POSITION).multiplyScalar(-1);
-      return v.distanceTo(vSide) < 0.1;
+      const vSide = new Vector3().copy(SIDES[key].POSITION);
+      return v.distanceTo(vSide) < 0.01;
     },
   );
-
   return sideKey ? SIDES[sideKey] : null;
 };
 
