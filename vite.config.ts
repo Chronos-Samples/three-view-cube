@@ -12,7 +12,7 @@ export default defineConfig({
       fileName: "three-view-cube",
     },
     rollupOptions: {
-      external: ["three", "@types/three"],
+      external: ["three", "@types/three", "camera-controls"],
     },
   },
   server: {
