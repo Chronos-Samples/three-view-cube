@@ -10,6 +10,7 @@ import {
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { MapControls } from "three/examples/jsm/controls/MapControls";
+import CameraControls from "camera-controls";
 import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer";
 import { createCube, getSide, rotateDirection, Side } from "./utils";
 import "./three-view-cube.css";
@@ -27,7 +28,8 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
   private _renderer: CSS3DRenderer;
   private readonly _scene: Scene;
   private readonly _camera: PerspectiveCamera;
-  private _cameraControls: OrbitControls | MapControls;
+  private _cameraControls: OrbitControls | MapControls | CameraControls;
+  private _controlsTarget: Vector3 = new Vector3();
 
   private _resolution: Vector2 = new Vector2();
   private _superResolutionFactor: number = 4;
@@ -78,7 +80,7 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     return this._cubeContainer;
   }
 
-  constructor(cameraControls: OrbitControls | MapControls) {
+  constructor(cameraControls: OrbitControls | MapControls | CameraControls) {
     super();
     this.updateCamera = this.updateCamera.bind(this);
     this.toSide = this.toSide.bind(this);
@@ -95,7 +97,11 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     //#endregion
 
     //#region Link with camera controls
-    cameraControls.addEventListener("change", this.updateCamera);
+    if (cameraControls instanceof CameraControls) {
+      cameraControls.addEventListener("update", this.updateCamera);
+    } else {
+      cameraControls.addEventListener("change", this.updateCamera);
+    }
     this.updateCamera();
     //#endregion
 
@@ -138,21 +144,33 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     this._isAnimating = true;
   }
 
-  public updateCamera() {
-    this.direction0
-      .subVectors(
-        this._cameraControls.object.position,
-        this._cameraControls.target,
-      )
-      .normalize()
-      .multiplyScalar(this._orbitRadius);
 
-    this._camera.position.copy(this.direction0);
-    this._camera.quaternion.copy(this._cameraControls.object.quaternion);
+  public updateCamera() {
+    if (this._cameraControls instanceof CameraControls) {
+    
+      const controlsTarget = this._cameraControls.getTarget(this._controlsTarget);
+      this.direction0
+        .subVectors(this._cameraControls.camera.position, controlsTarget)
+        .normalize()
+        .multiplyScalar(this._orbitRadius);
+
+      this._camera.position.copy(this.direction0);
+      this._camera.quaternion.copy(this._cameraControls.camera.quaternion);
+    } else {
+    
+      this.direction0
+        .subVectors(this._cameraControls.object.position, this._cameraControls.target)
+        .normalize()
+        .multiplyScalar(this._orbitRadius);
+
+      this._camera.position.copy(this.direction0);
+      this._camera.quaternion.copy(this._cameraControls.object.quaternion);
+    }
 
     if (!this._isAnimating && !getSide(this._camera.quaternion)) {
       this._side = null;
     }
+    
     this.render();
   }
 
@@ -178,16 +196,30 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
       this._camera.position.copy(position0);
 
       // update attached camera
-      const distance = this._cameraControls.object.position.distanceTo(
-        this._cameraControls.target,
-      );
+      if (this._cameraControls instanceof CameraControls) {
+        const controlsTarget = this._cameraControls.getTarget(this._controlsTarget);
+        const distance = this._cameraControls.camera.position.distanceTo(controlsTarget);
+        const newPosition = this._cameraControls.camera.position
+          .copy(this._camera.position)
+          .normalize()
+          .multiplyScalar(distance)
+          .add(this._cameraControls.getTarget(controlsTarget));
 
-      this._cameraControls.object.quaternion.copy(this._camera.quaternion);
-      this._cameraControls.object.position
-        .copy(this._camera.position)
-        .normalize()
-        .multiplyScalar(distance)
-        .add(this._cameraControls.target);
+        this._cameraControls.camera.quaternion.copy(this._camera.quaternion);
+        this._cameraControls.setPosition(newPosition.x, newPosition.y, newPosition.z)
+
+      } else {
+        const distance = this._cameraControls.object.position.distanceTo(
+          this._cameraControls.target,
+        );
+
+        this._cameraControls.object.quaternion.copy(this._camera.quaternion);
+        this._cameraControls.object.position
+          .copy(this._camera.position)
+          .normalize()
+          .multiplyScalar(distance)
+          .add(this._cameraControls.target);
+      }
 
       this.render();
 
