@@ -46,6 +46,9 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
   private _side: Side | null = null;
   private _sideButtonContainer: HTMLDivElement;
 
+  private _levelNumber: number = 0;
+  private _levelHeight: number = 50;
+
   private _isAnimating: boolean = false;
 
   public get isAnimating() {
@@ -77,6 +80,14 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
   public get domElement() {
     return this._cubeContainer;
   }
+
+  public set levelNumber(number:number){
+    this._levelNumber = number;
+  }
+
+  public set levelHeight(height:number){
+    this._levelHeight = height;
+  }  
 
   constructor(cameraControls: OrbitControls | MapControls) {
     super();
@@ -139,9 +150,12 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
   }
 
   public updateCamera() {
+    const yAdjustedForLevel = this._cameraControls.object.position.y - (this._levelHeight*this._levelNumber)
+    const positionAdjustedForLevel = new Vector3(this._cameraControls.object.position.x, yAdjustedForLevel, this._cameraControls.object.position.z)
+
     this.direction0
       .subVectors(
-        this._cameraControls.object.position,
+        positionAdjustedForLevel,
         this._cameraControls.target,
       )
       .normalize()
@@ -155,6 +169,8 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     }
     this.render();
   }
+
+
 
   public update(delta: number) {
     this._sideButtonContainer.style.opacity = this._side ? "1" : "0";
