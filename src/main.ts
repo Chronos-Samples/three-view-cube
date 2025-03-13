@@ -6,8 +6,10 @@ import {
   DirectionalLight,
   Mesh,
   MeshStandardMaterial,
+  Object3D,
   PerspectiveCamera,
   Scene,
+  Vector3,
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
@@ -78,6 +80,29 @@ const div: HTMLDivElement = document.createElement("div");
 div.classList.add("view-cube");
 div.append(controlsCube.domElement);
 document.body.append(div);
+
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Space") {
+    const targetPosition = controls.target.clone();
+
+    const offsetVector = new Vector3(0, 0, 1e-8);
+
+    offsetVector.applyQuaternion(camera.quaternion);
+
+    const targetLook = new Vector3(
+      targetPosition.x + offsetVector.x,
+      targetPosition.y,
+      targetPosition.z + offsetVector.z,
+    ); //look down
+
+    const object3d = new Object3D();
+    object3d.position.copy(targetPosition);
+    object3d.position.y -= 1;
+    object3d.lookAt(targetLook);
+
+    controlsCube.toDirection(object3d.quaternion);
+  }
+});
 
 let time = 0;
 

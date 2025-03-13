@@ -138,6 +138,17 @@ export class ThreeViewCube extends EventDispatcher<ThreeViewCubeEventMap> {
     this._isAnimating = true;
   }
 
+  public toDirection(quaternion: Quaternion) {
+    if (this._isAnimating) return;
+
+    this._quaternion0 = new Quaternion().copy(this._camera.quaternion);
+    this._quaternion1 = new Quaternion().copy(quaternion);
+    if (this._quaternion0.angleTo(this._quaternion1) < 1e-4) return;
+
+    this._progress = 0;
+    this._isAnimating = true;
+  }
+
   public updateCamera() {
     this.direction0
       .subVectors(
